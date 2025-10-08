@@ -1,4 +1,4 @@
-package com.utch.vendeta // Tu package name es correcto
+package com.utch.vendeta
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
@@ -22,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanner
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.utch.vendeta.ui.theme.VendetaTheme
 
@@ -45,34 +46,31 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun VendetaScreen() {
     val context = LocalContext.current
-    var scannedValue by remember { mutableStateOf<String?>("Aún no has escaneado nada") }
+    var scannedValue by remember { mutableStateOf("Aún no has escaneado nada") }
 
-    // Obtenemos una instancia del scanner.
-    val scanner: GmsBarcodeScanner = GmsBarcodeScanning.getClient(context)
+    // Opciones para escanear solo QR
+    val scannerOptions = GmsBarcodeScannerOptions.Builder()
+        .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+        .build()
 
-    // Este es el "lanzador" que inicia el scanner y procesa el resultado.
-    // Usar GmsBarcodeScanning.createActivityResultContract() es la forma moderna y correcta.
-    val scannerLauncher = rememberLauncherForActivityResult(
-        contract = GmsBarcodeScanning.createActivityResultContract()
-    ) { result: Barcode? ->
-        scannedValue = result?.rawValue ?: "El escaneo fue cancelado."
-    }
+    val scanner = GmsBarcodeScanning.getClient(context, scannerOptions)
 
-    // Este es el "lanzador" que pide el permiso de la cámara.
+    // Launcher para pedir permiso de cámara
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // Permiso concedido, ahora sí lanzamos el scanner
             scanner.startScan()
                 .addOnSuccessListener { barcode ->
-                    scannedValue = barcode.rawValue
+                    scannedValue = barcode.rawValue ?: "No se pudo leer el valor."
+                }
+                .addOnCanceledListener {
+                    scannedValue = "Escaneo cancelado."
                 }
                 .addOnFailureListener { e ->
-                    scannedValue = "Error al escanear: ${e.message}"
+                    scannedValue = "Error: ${e.localizedMessage}"
                 }
         } else {
-            // Permiso denegado, informamos al usuario
             Toast.makeText(context, "El permiso de la cámara es necesario.", Toast.LENGTH_LONG).show()
         }
     }
@@ -97,23 +95,23 @@ fun VendetaScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(onClick = {
-                // Comprobamos si ya tenemos el permiso
                 val hasCameraPermission = ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.CAMERA
                 ) == PackageManager.PERMISSION_GRANTED
 
                 if (hasCameraPermission) {
-                    // Si ya lo tenemos, lanzamos el scanner directamente
                     scanner.startScan()
                         .addOnSuccessListener { barcode ->
-                            scannedValue = barcode.rawValue
+                            scannedValue = barcode.rawValue ?: "No se pudo leer el valor."
+                        }
+                        .addOnCanceledListener {
+                            scannedValue = "Escaneo cancelado."
                         }
                         .addOnFailureListener { e ->
-                            scannedValue = "Error al escanear: ${e.message}"
+                            scannedValue = "Error: ${e.localizedMessage}"
                         }
                 } else {
-                    // Si no lo tenemos, lo pedimos
                     permissionLauncher.launch(Manifest.permission.CAMERA)
                 }
             }) {
@@ -123,7 +121,7 @@ fun VendetaScreen() {
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Resultado: ${scannedValue}",
+                text = "Resultado: $scannedValue",
                 fontSize = 18.sp
             )
         }
