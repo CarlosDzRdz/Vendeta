@@ -20,65 +20,113 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.Text
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.util.Log
+import com.google.android.gms.wearable.MessageClient
+import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.Wearable
+
 import com.utch.wear.presentation.theme.VendetaTheme
 
-class MainActivity : ComponentActivity() {
+// ---- MODIFICADO: La Activity ahora escucha mensajes ----
+class MainActivity : ComponentActivity(), MessageClient.OnMessageReceivedListener {
+
+    // Variable para cambiar el estado de la UI desde fuera de @Composable
+    private val gameStatus = mutableStateOf(GameStatus.WAITING)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // ---- NUEVO: Registrar el oyente de mensajes ----
+        Wearable.getMessageClient(this).addListener(this)
+
         setContent {
-            WearApp()
+            // Pasamos el estado a nuestra UI
+            WearApp(status = gameStatus.value)
         }
+    }
+
+    // ---- NUEVO: Se ejecuta cuando llega un mensaje del teléfono ----
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        if (messageEvent.path == "/game_result") {
+            val result = String(messageEvent.data)
+            Log.d("VendetaWatch", "Mensaje recibido: $result")
+
+            // Cambiamos el estado de la UI
+            if (result == "SUCCESS") {
+                gameStatus.value = GameStatus.SUCCESS
+            } else if (result == "FAILURE") {
+                gameStatus.value = GameStatus.FAILURE
+                // ---- NUEVO: Hacemos vibrar el reloj ----
+                vibrateDevice()
+            }
+        }
+    }
+
+    private fun vibrateDevice() {
+        val vibrationEffect = VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Para Android 12 (API 31) y superior
+            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val vibrator = vibratorManager.defaultVibrator
+            vibrator.vibrate(vibrationEffect)
+        } else {
+            // Para versiones anteriores de Android (método obsoleto)
+            @Suppress("DEPRECATION")
+            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            vibrator.vibrate(vibrationEffect)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // ---- NUEVO: Dejamos de escuchar mensajes para no gastar batería ----
+        Wearable.getMessageClient(this).removeListener(this)
     }
 }
 
-// Enum para representar los posibles estados de la pantalla
 enum class GameStatus {
     SUCCESS,
     FAILURE,
-    WAITING // Estado inicial mientras no recibe nada
+    WAITING
 }
 
 @Composable
-fun WearApp() {
-    // Variable de estado para controlar qué pantalla mostramos.
-    // Empezamos en WAITING.
-    var status by remember { mutableStateOf(GameStatus.WAITING) }
-
+fun WearApp(status: GameStatus) { // Ahora recibe el estado desde fuera
     VendetaTheme {
-        // Usamos un when para decidir qué pantalla mostrar
         when (status) {
             GameStatus.SUCCESS -> ResultScreen(
-                backgroundColor = Color(0xFF2C6E49), // Verde oscuro
+                backgroundColor = Color(0xFF2C6E49),
                 icon = Icons.Rounded.Check,
                 message = "Correcto"
             )
             GameStatus.FAILURE -> ResultScreen(
-                backgroundColor = Color(0xFF881C1C), // Rojo oscuro
+                backgroundColor = Color(0xFF881C1C),
                 icon = Icons.Rounded.Close,
                 message = "Incorrecto"
             )
             GameStatus.WAITING -> {
-                // --- Pantalla de espera y botones de prueba ---
+                // --- Pantalla de espera (ya sin botones de prueba) ---
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Esperando...")
-                    // Botones solo para probar la UI
-                    Row {
-                        Button(onClick = { status = GameStatus.SUCCESS }) { Text("OK") }
-                        Button(onClick = { status = GameStatus.FAILURE }) { Text("Error") }
-                    }
+                    Text("Esperando resultado...")
                 }
             }
         }
     }
 }
 
+// ... (El resto del código, ResultScreen y las Previews, se mantiene igual)
 @Composable
 fun ResultScreen(backgroundColor: Color, icon: ImageVector, message: String) {
     Box(
@@ -99,7 +147,6 @@ fun ResultScreen(backgroundColor: Color, icon: ImageVector, message: String) {
     }
 }
 
-// Previews para ver cómo se ve cada estado en Android Studio
 @Preview(device = "id:wearos_small_round", showSystemUi = true)
 @Composable
 fun SuccessPreview() {

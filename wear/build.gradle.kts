@@ -57,4 +57,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.google.android.gms:play-services-wearable:18.2.0")
 }

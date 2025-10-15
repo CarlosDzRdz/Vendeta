@@ -3,6 +3,7 @@ package com.utch.vendeta
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,17 +24,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.google.android.gms.wearable.Wearable
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.utch.vendeta.ui.theme.VendetaTheme
 
-// ---- NUEVO: Estructura para los acertijos ----
+// (Las clases Riddle y la lista gameRiddles se mantienen igual)
 data class Riddle(
     val clue: String,
     val correctAnswer: String
 )
 
-// ---- NUEVO: Lista de acertijos del juego ----
 val gameRiddles = listOf(
     Riddle(clue = "Me abres todos los días pero no soy una puerta. Tengo hojas pero no soy un árbol. ¿Dónde estoy?", correctAnswer = "BIBLIOTECA_NIVEL_1"),
     Riddle(clue = "El lugar donde el conocimiento se sirve caliente y el sueño se combate a sorbos.", correctAnswer = "CAFETERIA_NIVEL_2"),
@@ -42,15 +43,13 @@ val gameRiddles = listOf(
     Riddle(clue = "Aquí se cultiva el cuerpo con esfuerzo y disciplina. El sudor es parte del aprendizaje.", correctAnswer = "CANCHAS_NIVEL_5")
 )
 
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             VendetaTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     VendetaScreen()
                 }
             }
@@ -61,18 +60,31 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun VendetaScreen() {
     val context = LocalContext.current
-
-    // ---- LÓGICA DEL JUEGO AÑADIDA ----
     var currentRiddleIndex by remember { mutableStateOf(0) }
     var gameFinished by remember { mutableStateOf(false) }
     val currentRiddle = gameRiddles[currentRiddleIndex]
+
+    // ---- NUEVO: Cliente para comunicación con el reloj ----
+    val messageClient = Wearable.getMessageClient(context)
+
+    // --- NUEVA FUNCIÓN: Para enviar mensajes al reloj ---
+    fun sendMessageToWearable(result: String) {
+        // Busca los dispositivos conectados (nodos)
+        Wearable.getNodeClient(context).connectedNodes.addOnSuccessListener { nodes ->
+            nodes.forEach { node ->
+                // Envía el mensaje a cada nodo encontrado
+                messageClient.sendMessage(node.id, "/game_result", result.toByteArray())
+                    .addOnSuccessListener { Log.d("Vendeta", "Mensaje '$result' enviado a ${node.displayName}") }
+                    .addOnFailureListener { e -> Log.e("Vendeta", "Error al enviar mensaje", e) }
+            }
+        }
+    }
 
     val scannerOptions = GmsBarcodeScannerOptions.Builder()
         .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE)
         .build()
     val scanner = GmsBarcodeScanning.getClient(context, scannerOptions)
 
-    // Función para manejar el resultado del escaneo
     val handleScanResult = handleScanResult@{ scannedText: String? ->
         if (scannedText == null) {
             Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
@@ -80,6 +92,8 @@ fun VendetaScreen() {
         }
 
         if (scannedText == currentRiddle.correctAnswer) {
+            // ---- MODIFICADO: Envía "SUCCESS" al reloj ----
+            sendMessageToWearable("SUCCESS")
             if (currentRiddleIndex < gameRiddles.size - 1) {
                 currentRiddleIndex++
                 Toast.makeText(context, "¡Correcto! Siguiente acertijo.", Toast.LENGTH_SHORT).show()
@@ -87,6 +101,8 @@ fun VendetaScreen() {
                 gameFinished = true
             }
         } else {
+            // ---- MODIFICADO: Envía "FAILURE" al reloj ----
+            sendMessageToWearable("FAILURE")
             Toast.makeText(context, "Incorrecto. Intenta de nuevo.", Toast.LENGTH_LONG).show()
         }
     }
@@ -104,10 +120,11 @@ fun VendetaScreen() {
         }
     }
 
+    // --- El resto de la UI (Column, Text, Button) se mantiene igual ---
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceAround // Distribuye mejor el espacio
+        verticalArrangement = Arrangement.SpaceAround
     ) {
         Text(
             text = "Vendeta",
@@ -115,7 +132,6 @@ fun VendetaScreen() {
             fontWeight = FontWeight.Bold,
         )
 
-        // ---- UI MODIFICADA PARA MOSTRAR ACERTIJO ----
         if (gameFinished) {
             Text(
                 text = "¡Felicidades, has escapado!",
