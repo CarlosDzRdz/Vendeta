@@ -23,4 +23,3 @@ rootProject.name = "Vendeta"
 include(":app")
 
 include(":wear")
-include(":wear")
