@@ -1,11 +1,15 @@
-/* While this template provides a good starting point for using Wear Compose, you can always
- * take a look at https://github.com/android/wear-os-samples/tree/main/ComposeStarter to find the
- * most up to date changes to the libraries and their usages.
- */
-
 package com.utch.wear.presentation
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -22,49 +26,71 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.Text
-import android.content.Context
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
-import android.util.Log
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
-
 import com.utch.wear.presentation.theme.VendetaTheme
 
-// ---- MODIFICADO: La Activity ahora escucha mensajes ----
 class MainActivity : ComponentActivity(), MessageClient.OnMessageReceivedListener {
 
-    // Variable para cambiar el estado de la UI desde fuera de @Composable
     private val gameStatus = mutableStateOf(GameStatus.WAITING)
+
+    // ⭐ NUEVO: BroadcastReceiver para recibir mensajes del servicio
+    private val messageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val result = intent.getStringExtra("result") ?: return
+            Log.d("VendetaWear", "🔔 Broadcast recibido en MainActivity: $result")
+            handleGameResult(result)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ---- NUEVO: Registrar el oyente de mensajes ----
+        // Registrar listener de mensajes (método principal)
         Wearable.getMessageClient(this).addListener(this)
 
+        // ⭐ NUEVO: Registrar broadcast receiver (método secundario)
+        val filter = IntentFilter("com.utch.wear.GAME_RESULT")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(messageReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(messageReceiver, filter)
+        }
+
+        Log.d("VendetaWear", "✅ MainActivity iniciada y escuchando mensajes")
+
         setContent {
-            // Pasamos el estado a nuestra UI
             WearApp(status = gameStatus.value)
         }
     }
 
-    // ---- NUEVO: Se ejecuta cuando llega un mensaje del teléfono ----
+    // ⭐ MEJORADO: Método que recibe directamente (cuando la app está abierta)
     override fun onMessageReceived(messageEvent: MessageEvent) {
+        Log.d("VendetaWear", "📨 onMessageReceived llamado directamente: ${messageEvent.path}")
+
         if (messageEvent.path == "/game_result") {
             val result = String(messageEvent.data)
-            Log.d("VendetaWatch", "Mensaje recibido: $result")
+            handleGameResult(result)
+        }
+    }
 
-            // Cambiamos el estado de la UI
-            if (result == "SUCCESS") {
-                gameStatus.value = GameStatus.SUCCESS
-            } else if (result == "FAILURE") {
-                gameStatus.value = GameStatus.FAILURE
-                // ---- NUEVO: Hacemos vibrar el reloj ----
-                vibrateDevice()
+    // ⭐ NUEVO: Función centralizada para manejar resultados
+    private fun handleGameResult(result: String) {
+        Log.d("VendetaWear", "🎯 Procesando resultado: $result")
+
+        runOnUiThread {
+            when (result) {
+                "SUCCESS" -> {
+                    gameStatus.value = GameStatus.SUCCESS
+                    Log.d("VendetaWear", "✅ Estado cambiado a SUCCESS")
+                }
+                "FAILURE" -> {
+                    gameStatus.value = GameStatus.FAILURE
+                    vibrateDevice()
+                    Log.d("VendetaWear", "❌ Estado cambiado a FAILURE con vibración")
+                }
             }
         }
     }
@@ -73,22 +99,28 @@ class MainActivity : ComponentActivity(), MessageClient.OnMessageReceivedListene
         val vibrationEffect = VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Para Android 12 (API 31) y superior
             val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             val vibrator = vibratorManager.defaultVibrator
             vibrator.vibrate(vibrationEffect)
         } else {
-            // Para versiones anteriores de Android (método obsoleto)
             @Suppress("DEPRECATION")
             val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
             vibrator.vibrate(vibrationEffect)
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Reiniciar el estado al volver a la app
+        gameStatus.value = GameStatus.WAITING
+        Log.d("VendetaWear", "🔄 Estado reiniciado a WAITING")
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        // ---- NUEVO: Dejamos de escuchar mensajes para no gastar batería ----
         Wearable.getMessageClient(this).removeListener(this)
+        unregisterReceiver(messageReceiver)
+        Log.d("VendetaWear", "🛑 MainActivity destruida, listeners removidos")
     }
 }
 
@@ -99,7 +131,7 @@ enum class GameStatus {
 }
 
 @Composable
-fun WearApp(status: GameStatus) { // Ahora recibe el estado desde fuera
+fun WearApp(status: GameStatus) {
     VendetaTheme {
         when (status) {
             GameStatus.SUCCESS -> ResultScreen(
@@ -113,7 +145,6 @@ fun WearApp(status: GameStatus) { // Ahora recibe el estado desde fuera
                 message = "Incorrecto"
             )
             GameStatus.WAITING -> {
-                // --- Pantalla de espera (ya sin botones de prueba) ---
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
@@ -126,7 +157,6 @@ fun WearApp(status: GameStatus) { // Ahora recibe el estado desde fuera
     }
 }
 
-// ... (El resto del código, ResultScreen y las Previews, se mantiene igual)
 @Composable
 fun ResultScreen(backgroundColor: Color, icon: ImageVector, message: String) {
     Box(

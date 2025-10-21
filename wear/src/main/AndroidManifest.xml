@@ -2,10 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" >
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-
     <uses-feature android:name="android.hardware.type.watch" />
-
     <uses-permission android:name="android.permission.VIBRATE"/>
+
+    <!-- ⭐ NUEVOS: Permisos para comunicación -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
@@ -13,6 +15,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault" >
+
         <uses-library
             android:name="com.google.android.wearable"
             android:required="true" />
@@ -20,13 +23,10 @@
             android:name="wear-sdk"
             android:required="false" />
 
-        <!--
-               Set to true if your app is Standalone, that is, it does not require the handheld
-               app to run.
-        -->
+        <!-- ⭐ MODIFICADO: Cambiar de 'true' a 'false' para recibir del teléfono -->
         <meta-data
             android:name="com.google.android.wearable.standalone"
-            android:value="true" />
+            android:value="false" />
 
         <activity
             android:name=".presentation.MainActivity"
@@ -35,10 +35,20 @@
             android:theme="@style/MainActivityTheme.Starting" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- ⭐ NUEVO: Servicio para escuchar mensajes en segundo plano -->
+        <service
+            android:name=".presentation.WearMessageListenerService"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/game_result" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
