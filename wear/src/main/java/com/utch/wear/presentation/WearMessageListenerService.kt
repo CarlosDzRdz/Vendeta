@@ -25,4 +25,8 @@ class WearMessageListenerService : WearableListenerService() {
             Log.d("VendetaWear", "📡 Broadcast enviado a MainActivity")
         }
     }
+    override fun onCreate() {
+        super.onCreate()
+        Log.d("VendetaWear", "⚙️ WearMessageListenerService onCreate - servicio iniciado")
+    }
 }

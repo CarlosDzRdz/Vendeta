@@ -101,17 +101,21 @@ fun VendetaScreen() {
                 }
 
                 nodes.forEach { node ->
+                    // Método 1: Message API (original)
                     messageClient.sendMessage(node.id, "/game_result", result.toByteArray())
                         .addOnSuccessListener {
-                            Log.d("Vendeta", "✅ Mensaje '$result' enviado a ${node.displayName}")
+                            Log.d("Vendeta", "✅ Mensaje enviado a ${node.displayName}")
                         }
                         .addOnFailureListener { e ->
-                            Log.e("Vendeta", "❌ Error al enviar a ${node.displayName}", e)
+                            Log.e("Vendeta", "❌ Error con Message API", e)
                         }
                         .await()
+
+                    // Método 2: Data API (para Pixel Watch emulator)
+
                 }
             } catch (e: Exception) {
-                Log.e("Vendeta", "💥 Error crítico al enviar mensaje", e)
+                Log.e("Vendeta", "💥 Error crítico", e)
             }
         }
     }

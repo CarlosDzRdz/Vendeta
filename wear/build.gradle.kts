@@ -9,7 +9,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.utch.wear"
+        applicationId = "com.utch.vendeta"
         minSdk = 30
         targetSdk = 36
         versionCode = 1
@@ -59,4 +59,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation("com.google.android.gms:play-services-wearable:18.1.0")
+
 }
