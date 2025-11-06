@@ -191,7 +191,7 @@ fun VendetaScreen() {
         verticalArrangement = Arrangement.SpaceAround
     ) {
         Text(
-            text = "Vendeta",
+            text = "Umbral",
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
         )
