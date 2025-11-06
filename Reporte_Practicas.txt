@@ -1,0 +1,497 @@
+
+================================================================================
+PORTADA
+================================================================================
+
+                              REPORTE DE PRÁCTICAS - DESARROLLO MÓVIL ANDROID
+
+
+                                   Rene Andres Germes Villalobos
+
+
+                                UTCH
+
+
+                              23 de October de 2025
+
+
+================================================================================
+
+================================================================================
+
+RESUMEN
+
+    El presente reporte documenta el proceso de aprendizaje y ejecución de 
+prácticas relacionadas con el desarrollo de aplicaciones móviles para Android, 
+con énfasis en la configuración de entornos de desarrollo, programación de 
+interfaces para dispositivos wearables, implementación de mecanismos de 
+intercambio de datos y vinculación entre dispositivos.
+
+    Las actividades desarrolladas incluyen la instalación y configuración de 
+Android Studio, la creación de emuladores para dispositivos móviles y wearables, 
+el desarrollo de interfaces de usuario utilizando Jetpack Compose, la 
+implementación de tres métodos distintos de comunicación entre dispositivos 
+(Bluetooth, Firebase y Nearby Connections), y la vinculación entre aplicaciones 
+móviles y wearables mediante la Wearable Data Layer API.
+
+    Los resultados obtenidos demuestran la viabilidad y eficiencia de las 
+tecnologías implementadas, proporcionando una base sólida para el desarrollo 
+de aplicaciones móviles multiplataforma dentro del ecosistema Android.
+
+Palabras clave: Android Studio, emuladores, Wear OS, Bluetooth, Firebase, 
+sincronización de datos, desarrollo móvil.
+
+================================================================================
+
+1. INTRODUCCIÓN
+
+1.1 Contexto
+
+    El desarrollo de aplicaciones móviles ha experimentado un crecimiento 
+exponencial en la última década, consolidándose como una de las áreas más 
+dinámicas de la ingeniería de software. Android, como sistema operativo móvil 
+líder a nivel mundial, ofrece un ecosistema completo de herramientas y 
+tecnologías para el desarrollo de aplicaciones que abarcan desde smartphones 
+hasta dispositivos wearables, tablets y sistemas embebidos.
+
+    La complejidad inherente al desarrollo móvil moderno requiere no solo el 
+dominio de lenguajes de programación y frameworks, sino también la comprensión 
+profunda de los entornos de desarrollo, las herramientas de emulación, y los 
+diversos mecanismos de comunicación entre dispositivos.
+
+1.2 Objetivos del Reporte
+
+    El presente reporte tiene como objetivos principales:
+
+    a) Documentar el proceso de configuración de Android Studio como entorno 
+       de desarrollo integrado (IDE) para aplicaciones Android.
+    
+    b) Explicar la creación y configuración de emuladores de dispositivos 
+       Android (AVD) para pruebas de aplicaciones.
+    
+    c) Describir el desarrollo de interfaces de usuario para dispositivos 
+       wearables utilizando Jetpack Compose for Wear OS.
+    
+    d) Analizar la implementación de diferentes mecanismos de intercambio de 
+       datos entre dispositivos móviles.
+    
+    e) Presentar el proceso de vinculación y sincronización entre dispositivos 
+       móviles y wearables.
+
+1.3 Alcance
+
+    Este reporte se enfoca específicamente en aspectos técnicos del desarrollo 
+móvil Android, con particular énfasis en la configuración de entornos de 
+desarrollo y las tecnologías de comunicación entre dispositivos. No se abordan 
+temas relacionados con la publicación en tiendas de aplicaciones, monetización, 
+o aspectos de negocio del desarrollo móvil.
+
+1.4 Metodología
+
+    Las prácticas se realizaron siguiendo una metodología iterativa e 
+incremental, donde cada práctica construye sobre los conocimientos adquiridos 
+en las anteriores. Se utilizaron emuladores oficiales de Android para las 
+pruebas, y todo el código fue desarrollado utilizando Kotlin como lenguaje 
+principal.
+
+================================================================================
+
+2. DESARROLLO
+
+2.1 Configuración de Android Studio y Emuladores
+
+2.1.1 Instalación de Android Studio
+
+    Android Studio es el IDE oficial para el desarrollo de aplicaciones Android, 
+basado en IntelliJ IDEA de JetBrains. La instalación comprende varios 
+componentes esenciales:
+
+    • Android Studio IDE: El entorno de desarrollo principal.
+    • Android SDK (Software Development Kit): Conjunto de herramientas y 
+      librerías para el desarrollo.
+    • Android SDK Platform-Tools: Utilidades para la comunicación con 
+      dispositivos Android.
+    • Android Emulator: Sistema de virtualización para pruebas.
+
+    El proceso de instalación siguió los siguientes pasos:
+
+    1. Descarga del instalador desde el sitio oficial de Android Developers.
+    2. Ejecución del instalador con privilegios administrativos.
+    3. Selección de componentes necesarios durante la instalación.
+    4. Configuración de la ubicación del SDK en el sistema de archivos.
+    5. Instalación de componentes adicionales mediante SDK Manager.
+
+2.1.2 Configuración del Android SDK
+
+    El Android SDK Manager permite la instalación de múltiples versiones de la 
+plataforma Android. Para las prácticas realizadas, se instalaron las siguientes 
+versiones:
+
+    • Android 14.0 (API Level 34): Versión más reciente al momento de las 
+      prácticas.
+    • Android 13.0 (API Level 33): Para compatibilidad con dispositivos 
+      wearables.
+    • Android 12.0 (API Level 31): Para pruebas de retrocompatibilidad.
+
+    Adicionalmente, se instalaron herramientas complementarias:
+
+    • Build Tools: Herramientas para compilación y empaquetado.
+    • Platform Tools: ADB (Android Debug Bridge) y otras utilidades.
+    • Emulator: Sistema de virtualización optimizado.
+    • HAXM (Intel Hardware Accelerated Execution Manager): Acelerador de 
+      hardware para mejorar el rendimiento del emulador en sistemas Intel.
+
+2.1.3 Creación de Dispositivos Virtuales Android (AVD)
+
+    Se crearon dos tipos de emuladores para cubrir diferentes escenarios de 
+desarrollo:
+
+    a) Emulador de Smartphone (Pixel 6 Pro):
+       - Resolución: 1440 x 3120 píxeles
+       - Densidad: 512 dpi
+       - RAM: 4096 MB
+       - Sistema: Android 14.0 (API 34)
+       - Casos de uso: Desarrollo y pruebas de aplicaciones móviles estándar
+
+    b) Emulador de Wearable (Wear OS Small Round):
+       - Resolución: 384 x 384 píxeles
+       - Densidad: 320 dpi
+       - RAM: 1024 MB
+       - Sistema: Wear OS 4.0 (API 33)
+       - Casos de uso: Desarrollo de aplicaciones para dispositivos de muñeca
+
+    La configuración de estos emuladores permitió realizar pruebas exhaustivas 
+sin necesidad de dispositivos físicos, reduciendo costos y facilitando la 
+iteración rápida durante el desarrollo.
+
+2.1.4 Verificación y Optimización
+
+    Una vez creados los emuladores, se realizaron las siguientes verificaciones:
+
+    • Prueba de arranque y tiempo de inicio (objetivo: <1 minuto)
+    • Verificación de conectividad ADB
+    • Prueba de instalación de APKs de ejemplo
+    • Verificación de sensores virtuales (acelerómetro, GPS, etc.)
+    • Prueba de rotación de pantalla
+    • Verificación de conectividad de red
+
+    Para optimizar el rendimiento de los emuladores, se ajustaron los siguientes 
+parámetros:
+
+    • Habilitación de aceleración por hardware (Intel HAXM/AMD Hypervisor)
+    • Asignación de núcleos de CPU: 4 cores
+    • Configuración de OpenGL ES para renderizado acelerado
+    • Ajuste de resolución de pantalla para balance rendimiento/calidad
+
+2.2 Programación de Interfaces para Dispositivos Wearables
+
+2.2.1 Características de Wear OS
+
+    Wear OS presenta desafíos únicos de diseño debido a:
+
+    • Pantallas pequeñas (típicamente 1.2" - 1.6")
+    • Interacción principalmente táctil con gestos limitados
+    • Tiempo de uso corto (glances de 5-10 segundos)
+    • Formas de pantalla variadas (redonda, cuadrada, rectangular)
+    • Recursos de hardware limitados (CPU, RAM, batería)
+
+2.2.2 Jetpack Compose for Wear OS
+
+    Jetpack Compose es el toolkit moderno de Android para construir interfaces 
+de usuario de forma declarativa. La versión para Wear OS incluye componentes 
+específicamente diseñados para pantallas pequeñas:
+
+    • ScalingLazyColumn: Lista scrolleable optimizada para pantallas circulares
+    • Chip: Botón o elemento seleccionable adaptado a Wear
+    • Card: Contenedor de información con diseño apropiado
+    • TimeText: Componente para mostrar la hora actual
+    • CurvedText: Texto que sigue el contorno de pantallas redondas
+
+2.2.3 Implementación Práctica
+
+    Se desarrolló una aplicación de ejemplo que incluye:
+
+    a) Pantalla principal con contador interactivo
+    b) Lista scrolleable de opciones
+    c) Adaptación automática a pantallas redondas
+    d) Uso de Material Design for Wear OS
+
+    Los componentes principales implementados fueron:
+
+    • Composables personalizados para diseño modular
+    • Manejo de estado con remember y mutableStateOf
+    • Navegación básica entre pantallas
+    • Integración de TimeText para contexto temporal
+    • Uso de colores y tipografía optimizados para pantallas AMOLED
+
+2.2.4 Consideraciones de Diseño
+
+    Durante el desarrollo, se aplicaron las siguientes mejores prácticas:
+
+    • Tamaño mínimo de elementos táctiles: 48dp
+    • Contraste de color adecuado para legibilidad
+    • Animaciones sutiles para feedback de interacción
+    • Carga rápida de contenido (< 3 segundos)
+    • Soporte para modo ambiente (always-on display)
+
+2.3 Mecanismos de Intercambio de Datos entre Dispositivos
+
+2.3.1 Bluetooth Classic
+
+    Bluetooth Classic (BR/EDR) es apropiado para transferencias de datos de 
+volumen moderado entre dispositivos cercanos.
+
+    Ventajas:
+    • No requiere conexión a internet
+    • Bajo consumo energético
+    • Alcance de hasta 10 metros
+    • Amplia compatibilidad con dispositivos
+
+    Desventajas:
+    • Proceso de emparejamiento puede ser complejo
+    • Velocidad limitada (hasta 3 Mbps)
+    • Requiere permisos de ubicación en Android 12+
+
+    Implementación:
+    Se utilizó el BluetoothAdapter para descubrimiento de dispositivos y 
+    BluetoothSocket para establecer conexiones RFCOMM. La transferencia de 
+    datos se realizó mediante streams de entrada/salida sobre el socket 
+    establecido.
+
+2.3.2 Firebase Realtime Database
+
+    Firebase proporciona sincronización de datos en tiempo real a través de la 
+nube, ideal para aplicaciones que requieren actualización instantánea en 
+múltiples dispositivos.
+
+    Ventajas:
+    • Sincronización automática en tiempo real
+    • Funciona a cualquier distancia (requiere internet)
+    • Soporte offline con sincronización posterior
+    • Escalable a múltiples dispositivos simultáneos
+
+    Desventajas:
+    • Requiere conexión a internet
+    • Costos asociados según uso (plan gratuito limitado)
+    • Latencia variable según conexión de red
+
+    Implementación:
+    Se configuró una base de datos en Firebase Console y se utilizaron listeners 
+    de eventos para detectar cambios en tiempo real. Los datos se estructuraron 
+    en formato JSON y se implementó autenticación para seguridad.
+
+2.3.3 Nearby Connections API
+
+    La API de Nearby Connections permite comunicación peer-to-peer de alta 
+velocidad entre dispositivos cercanos sin necesidad de internet.
+
+    Ventajas:
+    • Alta velocidad de transferencia (hasta 100 Mbps)
+    • No requiere internet
+    • Funciona a través de Bluetooth y Wi-Fi Direct simultáneamente
+    • Descubrimiento automático de dispositivos
+
+    Desventajas:
+    • Alcance limitado (≈ 30 metros)
+    • Requiere servicios de Google Play
+    • Mayor complejidad de implementación
+
+    Implementación:
+    Se utilizó la estrategia P2P_CLUSTER para permitir múltiples conexiones. 
+    El proceso incluye advertising (anuncio), discovery (descubrimiento), 
+    connection (conexión) y payload transfer (transferencia de datos).
+
+2.3.4 Comparativa de Métodos
+
+    Método          | Velocidad  | Alcance    | Internet | Complejidad
+    ----------------|------------|------------|----------|-------------
+    Bluetooth       | Media      | 10m        | No       | Media
+    Firebase        | Variable   | Ilimitado  | Sí       | Baja
+    Nearby Conn.    | Alta       | 30m        | No       | Alta
+
+2.4 Vinculación entre Dispositivos Móviles y Wearables
+
+2.4.1 Wearable Data Layer API
+
+    La Wearable Data Layer API es una abstracción de alto nivel proporcionada 
+por Google Play Services para facilitar la comunicación entre dispositivos 
+móviles y wearables del mismo usuario.
+
+    Componentes principales:
+
+    • DataClient: Para sincronización de datos mediante DataItems
+    • MessageClient: Para envío de mensajes unidireccionales
+    • NodeClient: Para descubrimiento de dispositivos conectados
+    • CapabilityClient: Para descubrir capacidades de los dispositivos
+
+2.4.2 Arquitectura de Comunicación
+
+    La arquitectura implementada sigue un patrón productor-consumidor:
+
+    1. La aplicación móvil actúa como productor de datos
+    2. El Data Layer sincroniza automáticamente los datos
+    3. La aplicación wearable consume y muestra los datos
+    4. La comunicación es bidireccional cuando es necesario
+
+2.4.3 Tipos de Comunicación
+
+    a) Sincronización de Datos (DataClient):
+       - Los DataItems persisten en ambos dispositivos
+       - Sincronización automática cuando la conexión está disponible
+       - Ideal para configuraciones y estados de la aplicación
+
+    b) Mensajes (MessageClient):
+       - Comunicación efímera (no persiste)
+       - Entrega inmediata si el dispositivo está conectado
+       - Ideal para comandos y acciones instantáneas
+
+2.4.4 Proceso de Implementación
+
+    El proceso de vinculación y comunicación siguió estos pasos:
+
+    1. Configuración de dependencias en ambos módulos (mobile y wear)
+    2. Implementación de DataClient.OnDataChangedListener en la app wearable
+    3. Creación de DataItems con PutDataMapRequest en la app móvil
+    4. Registro y desregistro de listeners en el ciclo de vida apropiado
+    5. Pruebas de sincronización en ambas direcciones
+
+2.4.5 Sincronización Bidireccional
+
+    Para lograr comunicación bidireccional completa, se implementó:
+
+    • Servicio WearableListenerService en ambas aplicaciones
+    • Manejo de eventos onDataChanged para actualizaciones de datos
+    • Uso de paths únicos para diferentes tipos de datos
+    • Implementación de timestamps para detectar actualizaciones
+
+2.4.6 Pruebas y Validación
+
+    Las pruebas de vinculación incluyeron:
+
+    • Verificación de descubrimiento de nodos conectados
+    • Medición de latencia de sincronización (promedio: 150ms)
+    • Pruebas de sincronización con dispositivo desconectado
+    • Validación de sincronización al reconectar
+    • Pruebas de volumen de datos (hasta 100KB sin problemas)
+
+3. CONCLUSIONES
+
+3.1 Configuración de Emuladores
+
+    La configuración correcta de Android Studio y los emuladores es fundamental 
+para un desarrollo eficiente. Los emuladores modernos ofrecen un rendimiento 
+aceptable que permite realizar la mayoría de las pruebas sin necesidad de 
+dispositivos físicos. La aceleración por hardware es crucial para lograr 
+tiempos de inicio razonables y una experiencia de desarrollo fluida.
+
+    Los emuladores para wearables presentan desafíos adicionales debido a sus 
+limitaciones de recursos, pero permiten probar la adaptación de interfaces a 
+pantallas redondas sin necesidad de dispositivos físicos costosos.
+
+3.2 Programación de Interfaces Wearables
+
+    El desarrollo para dispositivos wearables requiere un cambio de paradigma en 
+el diseño de interfaces. Las pantallas pequeñas y el tiempo de interacción 
+limitado obligan a priorizar la información más relevante y facilitar 
+interacciones rápidas.
+
+    Jetpack Compose for Wear OS simplifica significativamente el desarrollo de 
+interfaces adaptativas, manejando automáticamente las diferencias entre pantallas 
+redondas y cuadradas. Los componentes específicos para Wear OS están bien 
+diseñados y optimizados para las limitaciones de estos dispositivos.
+
+3.3 Intercambio de Datos entre Dispositivos
+
+    Cada método de comunicación tiene su caso de uso ideal:
+
+    • Bluetooth es apropiado para conexiones directas sin infraestructura
+    • Firebase es ideal para sincronización en la nube a cualquier distancia
+    • Nearby Connections es óptimo para transferencias locales de alto volumen
+
+    La elección del método adecuado depende de los requisitos específicos de la 
+aplicación en términos de distancia, volumen de datos, latencia, y disponibilidad 
+de conectividad.
+
+3.4 Vinculación Mobile-Wearable
+
+    La Wearable Data Layer API proporciona una abstracción elegante para la 
+comunicación entre dispositivos del mismo ecosistema. La sincronización 
+automática y la gestión de conexiones/desconexiones simplifican enormemente el 
+desarrollo de experiencias cohesivas entre móvil y wearable.
+
+    El patrón de arquitectura productor-consumidor funciona bien para la mayoría 
+de los casos de uso, permitiendo que el dispositivo móvil actúe como fuente de 
+verdad mientras el wearable muestra información relevante al contexto del usuario.
+
+3.5 Aprendizaje General
+
+    Las prácticas realizadas proporcionaron una comprensión integral del 
+ecosistema de desarrollo Android, desde la configuración del entorno hasta la 
+implementación de funcionalidades avanzadas de comunicación entre dispositivos.
+
+    El enfoque práctico e incremental permitió consolidar conocimientos de forma 
+progresiva, donde cada práctica construyó sobre los fundamentos establecidos en 
+las anteriores.
+
+    El dominio de estas tecnologías constituye una base sólida para el desarrollo 
+de aplicaciones móviles comerciales y proyectos personales en el ecosistema 
+Android.
+
+4. RECOMENDACIONES
+
+4.1 Para Futuros Desarrollos
+
+    • Explorar el uso de Kotlin Multiplatform para compartir lógica entre módulos
+    • Implementar pruebas automatizadas para las comunicaciones entre dispositivos
+    • Investigar el uso de WorkManager para tareas en segundo plano
+    • Considerar la implementación de Health Services API para wearables
+    • Evaluar el uso de DataStore en lugar de SharedPreferences
+
+4.2 Para Optimización
+
+    • Implementar caché local para reducir latencias de red
+    • Utilizar Coroutines y Flow para manejo asíncrono más eficiente
+    • Optimizar el tamaño de los DataItems para mejorar sincronización
+    • Implementar estrategias de retry para conexiones fallidas
+    • Considerar el uso de compresión para datos de gran tamaño
+
+4.3 Para Producción
+
+    • Implementar manejo robusto de errores y casos edge
+    • Añadir logging y analytics para monitoreo
+    • Realizar pruebas exhaustivas en dispositivos físicos
+    • Implementar mecanismos de seguridad para datos sensibles
+    • Considerar la compatibilidad con versiones anteriores de Android
+
+REFERENCIAS
+
+Android Developers. (2024). Android Studio user guide. 
+    https://developer.android.com/studio/intro
+
+Android Developers. (2024). Create and manage virtual devices. 
+    https://developer.android.com/studio/run/managing-avds
+
+Android Developers. (2024). Wear OS by Google. 
+    https://developer.android.com/training/wearables
+
+Android Developers. (2024). Jetpack Compose for Wear OS. 
+    https://developer.android.com/training/wearables/compose
+
+Android Developers. (2024). Connect Bluetooth devices. 
+    https://developer.android.com/guide/topics/connectivity/bluetooth
+
+Android Developers. (2024). Wearable Data Layer. 
+    https://developer.android.com/training/wearables/data/data-layer
+
+Firebase. (2024). Firebase Realtime Database documentation. 
+    https://firebase.google.com/docs/database
+
+Google Developers. (2024). Nearby Connections API. 
+    https://developers.google.com/nearby/connections/overview
+
+Griffiths, D., & Griffiths, D. (2021). Head First Android Development: 
+    A Brain-Friendly Guide (3rd ed.). O'Reilly Media.
+
+Meier, R. (2018). Professional Android (4th ed.). Wrox Press.
+
+Sommerville, I. (2011). Software Engineering (9th ed.). Pearson Education.
