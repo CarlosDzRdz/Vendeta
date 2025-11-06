@@ -15,6 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.google.android.gms.wearable.Wearable
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.utch.vendeta.ui.theme.VendetaTheme
@@ -63,68 +66,76 @@ fun VendetaScreen() {
     val context = LocalContext.current
     var currentRiddleIndex by remember { mutableStateOf(0) }
     var gameFinished by remember { mutableStateOf(false) }
-    var connectedNodes by remember { mutableStateOf<String>("Buscando dispositivos...") }
-    val currentRiddle = gameRiddles[currentRiddleIndex]
+
+    // ⭐ 1. AÑADIMOS EL CONTADOR DE INTENTOS Y UN ESTADO PARA SABER SI EL JUGADOR GANÓ
+    var attemptsLeft by remember { mutableStateOf(3) }
+    var playerWon by remember { mutableStateOf(false) }
+
+    var connectedNodes by remember { mutableStateOf("Buscando dispositivos...") }
+
+    val currentRiddle = gameRiddles.getOrNull(currentRiddleIndex) ?: gameRiddles.first()
 
     val messageClient = Wearable.getMessageClient(context)
     val nodeClient = Wearable.getNodeClient(context)
 
-    // ⭐ NUEVO: Verificar dispositivos conectados al inicio
-    LaunchedEffect(Unit) {
+    fun sendMessageToWearable(path: String, message: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val nodes = nodeClient.connectedNodes.await()
-                val nodeInfo = if (nodes.isEmpty()) {
-                    "❌ Sin dispositivos conectados"
-                } else {
-                    "✅ Conectado: ${nodes.joinToString { it.displayName }}"
+                if (nodes.isEmpty()) {
+                    Log.w("Vendeta", "⚠️ No hay nodos conectados.")
+                    return@launch
                 }
-                connectedNodes = nodeInfo
-                Log.d("Vendeta", "Nodos conectados: $nodeInfo")
+                nodes.forEach { node ->
+                    messageClient.sendMessage(node.id, path, message.toByteArray())
+                        .addOnSuccessListener {
+                            Log.d("Vendeta", "✅ Mensaje '$message' enviado por la ruta '$path'")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e("Vendeta", "❌ Error al enviar mensaje por la ruta '$path'", e)
+                        }
+                }
             } catch (e: Exception) {
-                connectedNodes = "⚠️ Error al buscar dispositivos"
-                Log.e("Vendeta", "Error buscando nodos", e)
+                Log.e("Vendeta", "💥 Error crítico al enviar mensaje", e)
             }
         }
     }
 
-    // ⭐ MEJORADO: Función con logs y verificación
-    fun sendMessageToWearable(result: String) {
+    // ⭐ 2. MODIFICAMOS LA FUNCIÓN DE REINICIO
+    fun restartGame() {
+        Log.d("Vendeta", "Solicitando reinicio del juego...")
+        currentRiddleIndex = 0
+        gameFinished = false
+        attemptsLeft = 3 // Reiniciamos los intentos
+        playerWon = false
+        sendMessageToWearable("/game_control", "RESTART")
+    }
+
+    // ⭐ 3. LANZAMOS EL NÚMERO DE INTENTOS AL RELOJ CADA VEZ QUE CAMBIE
+    LaunchedEffect(attemptsLeft, gameFinished) {
+        if (!gameFinished) {
+            sendMessageToWearable("/game_data", "ATTEMPTS:${attemptsLeft}")
+        }
+    }
+
+    // ... (LaunchedEffect para buscar nodos no cambia)
+    LaunchedEffect(Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val nodes = nodeClient.connectedNodes.await()
-                Log.d("Vendeta", "📤 Intentando enviar '$result' a ${nodes.size} nodos")
-
-                if (nodes.isEmpty()) {
-                    Log.w("Vendeta", "⚠️ No hay nodos conectados")
-                    return@launch
-                }
-
-                nodes.forEach { node ->
-                    // Método 1: Message API (original)
-                    messageClient.sendMessage(node.id, "/game_result", result.toByteArray())
-                        .addOnSuccessListener {
-                            Log.d("Vendeta", "✅ Mensaje enviado a ${node.displayName}")
-                        }
-                        .addOnFailureListener { e ->
-                            Log.e("Vendeta", "❌ Error con Message API", e)
-                        }
-                        .await()
-
-                    // Método 2: Data API (para Pixel Watch emulator)
-
-                }
+                connectedNodes = if (nodes.isEmpty()) "❌ Sin dispositivos conectados" else "✅ Conectado"
             } catch (e: Exception) {
-                Log.e("Vendeta", "💥 Error crítico", e)
+                connectedNodes = "⚠️ Error al buscar dispositivos"
             }
         }
     }
 
     val scannerOptions = GmsBarcodeScannerOptions.Builder()
-        .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE)
+        .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
         .build()
     val scanner = GmsBarcodeScanning.getClient(context, scannerOptions)
 
+    // ⭐ 4. ACTUALIZAMOS LA LÓGICA DEL ESCANEO PARA MANEJAR INTENTOS
     val handleScanResult = handleScanResult@{ scannedText: String? ->
         if (scannedText == null) {
             Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
@@ -132,19 +143,33 @@ fun VendetaScreen() {
         }
 
         if (scannedText == currentRiddle.correctAnswer) {
-            sendMessageToWearable("SUCCESS")
+            // --- SI LA RESPUESTA ES CORRECTA ---
             if (currentRiddleIndex < gameRiddles.size - 1) {
+                sendMessageToWearable("/game_result", "SUCCESS")
                 currentRiddleIndex++
                 Toast.makeText(context, "¡Correcto! Siguiente acertijo.", Toast.LENGTH_SHORT).show()
             } else {
+                // El jugador ganó
                 gameFinished = true
+                playerWon = true
+                sendMessageToWearable("/game_result", "WIN")
             }
         } else {
-            sendMessageToWearable("FAILURE")
-            Toast.makeText(context, "Incorrecto. Intenta de nuevo.", Toast.LENGTH_LONG).show()
+            // --- SI LA RESPUESTA ES INCORRECTA ---
+            attemptsLeft-- // Restamos un intento
+            sendMessageToWearable("/game_result", "FAILURE")
+            Toast.makeText(context, "Incorrecto. Te quedan $attemptsLeft intentos.", Toast.LENGTH_LONG).show()
+
+            if (attemptsLeft <= 0) {
+                // El jugador perdió
+                gameFinished = true
+                playerWon = false
+                sendMessageToWearable("/game_result", "GAME_OVER")
+            }
         }
     }
 
+    // ... (permissionLauncher no cambia)
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -158,6 +183,8 @@ fun VendetaScreen() {
         }
     }
 
+
+    // --- ⭐ 5. ACTUALIZAMOS LA INTERFAZ DE USUARIO ---
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -169,7 +196,6 @@ fun VendetaScreen() {
             fontWeight = FontWeight.Bold,
         )
 
-        // ⭐ NUEVO: Mostrar estado de conexión
         Text(
             text = connectedNodes,
             fontSize = 14.sp,
@@ -179,48 +205,52 @@ fun VendetaScreen() {
         )
 
         if (gameFinished) {
-            Text(
-                text = "¡Felicidades, has escapado!",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-        } else {
-            Text(
-                text = currentRiddle.clue,
-                fontSize = 22.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 24.dp)
-            )
-        }
-
-        if (!gameFinished) {
-            Button(onClick = {
-                val hasCameraPermission = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.CAMERA
-                ) == PackageManager.PERMISSION_GRANTED
-
-                if (hasCameraPermission) {
-                    scanner.startScan()
-                        .addOnSuccessListener { barcode -> handleScanResult(barcode.rawValue) }
-                        .addOnCanceledListener { handleScanResult(null) }
-                        .addOnFailureListener { e -> Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show() }
-                } else {
-                    permissionLauncher.launch(Manifest.permission.CAMERA)
+            // --- PANTALLA DE FIN DE JUEGO ---
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    // Mostramos un mensaje diferente si ganó o perdió
+                    text = if (playerWon) "¡Felicidades, has escapado!" else "Perdiste. No quedan más intentos.",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                Button(onClick = { restartGame() }) {
+                    Text("Jugar de Nuevo")
                 }
-            }) {
-                Text(text = "Escanear Pista")
             }
+        } else {
+            // --- PANTALLA DE JUEGO EN CURSO ---
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = currentRiddle.clue,
+                    fontSize = 22.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                )
 
-            // ⭐ NUEVO: Botones de prueba
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { sendMessageToWearable("SUCCESS") }) {
-                    Text("Prueba ✓")
-                }
-                Button(onClick = { sendMessageToWearable("FAILURE") }) {
-                    Text("Prueba ✗")
+                Button(onClick = {
+                    val hasCameraPermission = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    if (hasCameraPermission) {
+                        scanner.startScan()
+                            .addOnSuccessListener { barcode -> handleScanResult(barcode.rawValue) }
+                            .addOnCanceledListener { handleScanResult(null) }
+                            .addOnFailureListener { e -> Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show() }
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                }) {
+                    Text(text = "Escanear Pista")
                 }
             }
         }
